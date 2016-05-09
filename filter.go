@@ -111,7 +111,7 @@ func Get(cur interface{}, querystr string) (interface{}, error) {
 
 func matchChild(arr []interface{}, query string, val string) (int, error) {
 	for i, v := range arr {
-		out, err := processJsonQuery(v, query)
+		out, err := Get(v, query)
 		if err == nil && out == val {
 			return i, nil
 		}

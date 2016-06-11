@@ -1,0 +1,14 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "URL": "https://github.com/whyrusleeping/json-filter/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/json-filter"
+  },
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "json-filter",
+  "version": "0.0.0"
+}

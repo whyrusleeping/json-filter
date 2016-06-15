@@ -17,8 +17,9 @@ func parseQueryString(qstr string) ([]string, error) {
 		if i == -1 {
 			return append(out, qstr), nil
 		}
-
-		out = append(out, qstr[:i])
+		if len(qstr[:i]) > 0 {
+			out = append(out, qstr[:i])
+		}
 		switch qstr[i] {
 		case '[':
 			clb := findClosingBracket(qstr[i+1:])
@@ -26,7 +27,12 @@ func parseQueryString(qstr string) ([]string, error) {
 				return nil, fmt.Errorf("closing bracket not found")
 			}
 			out = append(out, qstr[i:clb+i+2])
-			qstr = qstr[i+clb+3:]
+
+			if len(qstr) < i+clb+3 {
+				return out, nil
+			} else {
+				qstr = qstr[i+clb+3:]
+			}
 		case '.':
 			qstr = qstr[i+1:]
 		}
@@ -109,6 +115,69 @@ func Get(cur interface{}, querystr string) (interface{}, error) {
 	return cur, nil
 }
 
+func Set(cur interface{}, querystr string, value interface{}) error {
+	query, err := parseQueryString(querystr)
+	if err != nil {
+		return err
+	}
+
+	for i, q := range query {
+		last := i == len(query)-1
+		switch obj := cur.(type) {
+		case map[string]interface{}:
+			if last {
+				obj[q] = value
+				return nil
+			}
+			v, ok := obj[q]
+			if !ok {
+				return fmt.Errorf("key not found: %s", strings.Join(query[:i+1], "."))
+			}
+
+			cur = v
+		case []interface{}:
+			if q[0] != '[' || q[len(q)-1] != ']' {
+				return fmt.Errorf("must use [N] notation for accessing arrays")
+			}
+
+			nums := strings.Trim(q, "[]")
+			if nums == "" {
+				return fmt.Errorf("don't currently support queries on multiple array members")
+			}
+
+			var i int
+			if strings.Contains(nums, "=") {
+				parts := strings.Split(nums, "=")
+				if len(parts) != 2 {
+					return fmt.Errorf("array queries must contain a single equality operator")
+				}
+				n, err := matchChild(obj, strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]))
+				if err != nil {
+					return err
+				}
+
+				i = n
+			} else {
+				n, err := strconv.Atoi(nums)
+				if err != nil {
+					return err
+				}
+
+				i = n
+			}
+			if last {
+				obj[i] = value
+				return nil
+			}
+
+			cur = obj[i]
+		default:
+			return fmt.Errorf("end of the line?")
+		}
+	}
+
+	return nil
+}
 func matchChild(arr []interface{}, query string, val string) (int, error) {
 	for i, v := range arr {
 		out, err := Get(v, query)
